@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Powered Flappy Bird</title>
-    <!-- Tailwind CSS CDN - Play CDN for development -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Press Start 2P -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
@@ -31,23 +29,18 @@
     </style>
 </head>
 <body class="bg-gradient-to-b from-blue-400 to-blue-600 min-h-screen flex flex-col items-center justify-center p-4">
-    <!-- Main Title -->
     <h1 class="text-4xl text-white mb-4 text-center">AI Flappy Bird</h1>
     
-    <!-- Instructions -->
     <p class="text-white text-center mb-6 max-w-2xl">
         Flap your arms to make the bird fly! Make sure your shoulders and arms are visible in the camera.
     </p>
     
-    <!-- Loading Indicator -->
     <div id="loadingIndicator" class="bg-white bg-opacity-90 p-6 rounded-lg shadow-lg text-center">
         <div class="spinner mb-4"></div>
         <p class="text-blue-600">Loading AI Model...</p>
     </div>
     
-    <!-- Main Container - Updated layout with wider game canvas -->
     <div id="mainContainer" class="hidden flex gap-8 items-start w-full max-w-7xl">
-        <!-- Game Canvas - Now wider (3/4 of space) -->
         <div class="w-3/4 bg-white p-4 rounded-lg shadow-lg">
             <canvas id="gameCanvas" width="600" height="600" class="border border-gray-300 w-full"></canvas>
             <div id="gameInfo" class="mt-2 text-center">
@@ -55,7 +48,6 @@
             </div>
         </div>
         
-        <!-- Camera View Container - Now narrower (1/4 of space) -->
         <div class="w-1/4 bg-white p-4 rounded-lg shadow-lg">
             <video id="webcamVideo" class="hidden" width="240" height="180"></video>
             <canvas id="cameraCanvas" width="240" height="180" class="border border-gray-300 rounded w-full"></canvas>
@@ -64,21 +56,16 @@
     </div>
 
     <script type="module">
-        // Import MediaPipe modules using ES Module syntax
         import { FilesetResolver, PoseLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js';
         
-        // Game variables - Updated state management
-        let gameState = 'loading'; // 'loading', 'ready', 'playing', 'gameOver'
+        let gameState = 'loading';
         let score = 0;
         let gameSpeed = 3;
         
-        // Canvas and context
         const gameCanvas = document.getElementById('gameCanvas');
         const gameCtx = gameCanvas.getContext('2d');
         const cameraCanvas = document.getElementById('cameraCanvas');
         const cameraCtx = cameraCanvas.getContext('2d');
-        
-        // Bird object
         const bird = {
             x: 150,
             y: 300,
@@ -93,12 +80,10 @@
             },
             
             update() {
-                // Only apply physics when playing
                 if (gameState === 'playing') {
                     this.velocity += this.gravity;
                     this.y += this.velocity;
                     
-                    // Boundary checks
                     if (this.y < 0) {
                         this.y = 0;
                         this.velocity = 0;
@@ -106,25 +91,21 @@
                     if (this.y + this.height > gameCanvas.height) {
                         this.y = gameCanvas.height - this.height;
                         this.velocity = 0;
-                        // Removed gameState = 'gameOver'; - no death on floor
                     }
                 }
             },
             
             draw() {
-                // Draw bird as a yellow circle
                 gameCtx.fillStyle = '#FFD700';
                 gameCtx.beginPath();
                 gameCtx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
                 gameCtx.fill();
                 
-                // Bird's eye
                 gameCtx.fillStyle = '#000';
                 gameCtx.beginPath();
                 gameCtx.arc(this.x + this.width/2 + 5, this.y + this.height/2 - 5, 3, 0, Math.PI * 2);
                 gameCtx.fill();
                 
-                // Bird's beak
                 gameCtx.fillStyle = '#FFA500';
                 gameCtx.beginPath();
                 gameCtx.moveTo(this.x + this.width, this.y + this.height/2);
@@ -135,7 +116,6 @@
             }
         };
         
-        // Pipes array
         const pipes = [];
         const pipeWidth = 80;
         const pipeGap = 200;
@@ -154,27 +134,22 @@
             }
             
             draw() {
-                // Top pipe
                 gameCtx.fillStyle = '#228B22';
                 gameCtx.fillRect(this.x, 0, this.width, this.gapY);
                 
-                // Bottom pipe
                 gameCtx.fillStyle = '#228B22';
                 gameCtx.fillRect(this.x, this.gapY + pipeGap, this.width, gameCanvas.height - this.gapY - pipeGap);
                 
-                // Pipe caps
                 gameCtx.fillStyle = '#32CD32';
                 gameCtx.fillRect(this.x - 5, this.gapY - 30, this.width + 10, 30);
                 gameCtx.fillRect(this.x - 5, this.gapY + pipeGap, this.width + 10, 30);
                 
-                // Pipe highlights
                 gameCtx.fillStyle = '#90EE90';
                 gameCtx.fillRect(this.x, 0, 8, this.gapY);
                 gameCtx.fillRect(this.x, this.gapY + pipeGap, 8, gameCanvas.height - this.gapY - pipeGap);
             }
             
             checkCollision() {
-                // Check if bird collides with this pipe
                 if (bird.x < this.x + this.width &&
                     bird.x + bird.width > this.x &&
                     (bird.y < this.gapY || bird.y + bird.height > this.gapY + pipeGap)) {
@@ -192,20 +167,16 @@
             }
         }
         
-        // MediaPipe variables
         let poseLandmarker;
-        let armState = 'DOWN'; // 'UP' or 'DOWN'
+        let armState = 'DOWN';
         let lastVideoTime = -1;
         
-        // Initialize MediaPipe with proper ES Module imports
         async function initializeMediaPipe() {
             try {
-                // Initialize vision tasks
                 const vision = await FilesetResolver.forVisionTasks(
                     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
                 );
                 
-                // Create pose landmarker
                 poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
                     baseOptions: {
                         modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
@@ -218,7 +189,6 @@
                     minTrackingConfidence: 0.5
                 });
                 
-                // Initialize camera
                 const video = document.getElementById('webcamVideo');
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { width: 240, height: 180 } 
@@ -226,13 +196,10 @@
                 video.srcObject = stream;
                 video.play();
                 
-                // Start pose detection loop
                 video.addEventListener('loadeddata', () => {
-                    // Hide loading indicator and show main container
                     document.getElementById('loadingIndicator').classList.add('hidden');
                     document.getElementById('mainContainer').classList.remove('hidden');
                     
-                    // Set to ready state - wait for player input
                     gameState = 'ready';
                     gameLoop();
                     detectPose();
@@ -245,7 +212,6 @@
             }
         }
         
-        // Pose detection function
         async function detectPose() {
             const video = document.getElementById('webcamVideo');
             
@@ -253,20 +219,16 @@
                 lastVideoTime = video.currentTime;
                 
                 try {
-                    // Detect pose landmarks
                     const results = poseLandmarker.detectForVideo(video, performance.now());
                     
-                    // Clear and draw video frame on camera canvas
                     cameraCtx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
                     cameraCtx.drawImage(video, 0, 0, cameraCanvas.width, cameraCanvas.height);
                     
                     if (results.landmarks && results.landmarks.length > 0) {
                         const landmarks = results.landmarks[0];
                         
-                        // Draw pose landmarks
                         drawPoseLandmarks(landmarks);
                         
-                        // Flap Detection Algorithm - More Sensitive (wrist-to-elbow comparison)
                         const LEFT_SHOULDER = 11;
                         const RIGHT_SHOULDER = 12;
                         const LEFT_ELBOW = 13;
@@ -274,7 +236,6 @@
                         const LEFT_WRIST = 15;
                         const RIGHT_WRIST = 16;
                         
-                        // Get landmark coordinates
                         const leftShoulder = landmarks[LEFT_SHOULDER];
                         const rightShoulder = landmarks[RIGHT_SHOULDER];
                         const leftElbow = landmarks[LEFT_ELBOW];
@@ -282,19 +243,14 @@
                         const leftWrist = landmarks[LEFT_WRIST];
                         const rightWrist = landmarks[RIGHT_WRIST];
                         
-                        // Check if all required landmarks are visible (including elbows)
                         if (leftShoulder && rightShoulder && leftElbow && rightElbow && leftWrist && rightWrist) {
-                            // Current arm state detection - More sensitive (wrist above elbow)
                             const leftArmUp = leftWrist.y < leftElbow.y;
                             const rightArmUp = rightWrist.y < rightElbow.y;
                             const bothArmsUp = leftArmUp && rightArmUp;
                             
-                            // State machine for flap detection
                             if (armState === 'DOWN' && bothArmsUp) {
-                                // Arms moved from down to up position
                                 armState = 'UP';
                             } else if (armState === 'UP' && !bothArmsUp) {
-                                // Arms moved from up to down position - FLAP DETECTED!
                                 if (gameState === 'playing') {
                                     bird.flap();
                                 } else if (gameState === 'ready' || gameState === 'gameOver') {
@@ -312,18 +268,14 @@
             requestAnimationFrame(detectPose);
         }
         
-        // Draw pose landmarks for visual feedback
         function drawPoseLandmarks(landmarks) {
-            // Draw connections between landmarks
             const connections = [
-                [11, 12], // shoulders
-                [11, 13], [13, 15], // left arm
-                [12, 14], [14, 16], // right arm
-                [11, 23], [12, 24], // torso
-                [23, 24] // hips
+                [11, 12],
+                [11, 13], [13, 15],
+                [12, 14], [14, 16],
+                [11, 23], [12, 24],
+                [23, 24]
             ];
-            
-            // Draw connections
             cameraCtx.strokeStyle = '#00FF00';
             cameraCtx.lineWidth = 2;
             connections.forEach(([start, end]) => {
@@ -337,10 +289,9 @@
                 }
             });
             
-            // Draw landmark points
             cameraCtx.fillStyle = '#FF0000';
             landmarks.forEach((landmark, index) => {
-                if ([11, 12, 13, 14, 15, 16, 23, 24].includes(index)) { // Only draw key points
+                if ([11, 12, 13, 14, 15, 16, 23, 24].includes(index)) {
                     cameraCtx.beginPath();
                     cameraCtx.arc(
                         landmark.x * cameraCanvas.width, 
@@ -352,56 +303,42 @@
             });
         }
         
-        // NEW: Start game function
         function startGame() {
-            // Reset bird position and velocity
             bird.y = 300;
             bird.velocity = 0;
             
-            // Clear pipes array
             pipes.length = 0;
             
-            // Reset score and timer
             score = 0;
             pipeSpawnTimer = 0;
             document.getElementById('scoreDisplay').textContent = score;
             
-            // Set game state to playing
             gameState = 'playing';
             
-            // Give initial flap for responsive feel
             bird.flap();
         }
-        
-        // Game functions
         function spawnPipe() {
             pipes.push(new Pipe(gameCanvas.width));
         }
         
         function updatePipes() {
-            // Only update pipes when playing
             if (gameState === 'playing') {
-                // Spawn new pipes
                 pipeSpawnTimer++;
-                if (pipeSpawnTimer >= 140) { // Spawn every ~2.3 seconds at 60fps
+                if (pipeSpawnTimer >= 140) {
                     spawnPipe();
                     pipeSpawnTimer = 0;
                 }
                 
-                // Update existing pipes
                 for (let i = pipes.length - 1; i >= 0; i--) {
                     const pipe = pipes[i];
                     pipe.update();
                     
-                    // Check collision
                     if (pipe.checkCollision()) {
                         gameState = 'gameOver';
                     }
                     
-                    // Check score
                     pipe.checkScore();
                     
-                    // Remove pipes that are off-screen
                     if (pipe.x + pipe.width < 0) {
                         pipes.splice(i, 1);
                     }
@@ -410,33 +347,25 @@
         }
         
         function drawGame() {
-            // Clear canvas with gradient background
             const gradient = gameCtx.createLinearGradient(0, 0, 0, gameCanvas.height);
             gradient.addColorStop(0, '#87CEEB');
             gradient.addColorStop(1, '#E0F6FF');
             gameCtx.fillStyle = gradient;
             gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
             
-            // Draw clouds
             drawClouds();
             
-            // Draw pipes
             pipes.forEach(pipe => pipe.draw());
             
-            // Draw bird
             bird.draw();
             
-            // Draw score
             gameCtx.fillStyle = '#000';
             gameCtx.font = '24px "Press Start 2P"';
             gameCtx.fillText(`Score: ${score}`, 20, 40);
             
-            // Draw arm state indicator
             gameCtx.fillStyle = armState === 'UP' ? '#00FF00' : '#FF0000';
             gameCtx.font = '16px "Press Start 2P"';
             gameCtx.fillText(`Arms: ${armState}`, 20, 80);
-            
-            // Draw state-specific screens
             if (gameState === 'ready') {
                 gameCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                 gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
@@ -468,7 +397,6 @@
             gameCtx.fillStyle = '#FFF';
             gameCtx.globalAlpha = 0.8;
             
-            // Simple cloud shapes
             const clouds = [
                 {x: 100, y: 50, size: 20},
                 {x: 300, y: 80, size: 25},
@@ -487,19 +415,15 @@
         }
         
         function gameLoop() {
-            // Always update bird (but physics only apply when playing)
             bird.update();
             
-            // Only update pipes when playing
             updatePipes();
             
-            // Always draw the game
             drawGame();
             
             requestAnimationFrame(gameLoop);
         }
         
-        // Start the application
         initializeMediaPipe();
     </script>
 </body>
